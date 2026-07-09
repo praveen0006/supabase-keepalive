@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Supabase Keep-Alive Dashboard</title>
+  <meta name="description" content="Real-time status dashboard for all your Supabase free-tier projects. Monitor ping health and latency at a glance." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #080c14;
+      --surface:      #0f1624;
+      --card:         rgba(255,255,255,0.04);
+      --card-hover:   rgba(255,255,255,0.07);
+      --border:       rgba(255,255,255,0.08);
+      --border-hover: rgba(255,255,255,0.16);
+
+      --green:        #22d3a5;
+      --green-glow:   rgba(34,211,165,0.18);
+      --green-dim:    rgba(34,211,165,0.12);
+
+      --red:          #f4617a;
+      --red-glow:     rgba(244,97,122,0.18);
+      --red-dim:      rgba(244,97,122,0.12);
+
+      --amber:        #fbbf24;
+      --amber-glow:   rgba(251,191,36,0.18);
+
+      --blue:         #6366f1;
+      --blue-bright:  #818cf8;
+
+      --text-1: #f1f5f9;
+      --text-2: #94a3b8;
+      --text-3: #475569;
+
+      --radius:  16px;
+      --radius-sm: 10px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-1);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Background aurora ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% -10%, rgba(99,102,241,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 110%, rgba(34,211,165,0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Header ── */
+    header {
+      padding: 56px 0 0;
+      text-align: center;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .logo-icon {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, var(--blue), var(--green));
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 0 32px rgba(99,102,241,0.4);
+    }
+
+    .logo-text {
+      font-size: 22px;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--blue-bright), var(--green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 14px;
+    }
+
+    h1 span {
+      background: linear-gradient(135deg, var(--blue-bright) 0%, var(--green) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--text-2);
+      max-width: 520px;
+      margin: 0 auto 48px;
+      line-height: 1.6;
+    }
+
+    /* ── Summary bar ── */
+    .summary-bar {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 48px;
+    }
+
+    .stat-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 10px 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      backdrop-filter: blur(8px);
+      transition: border-color .2s;
+    }
+
+    .stat-chip:hover { border-color: var(--border-hover); }
+
+    .stat-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot-green  { background: var(--green);  box-shadow: 0 0 8px var(--green); }
+    .dot-red    { background: var(--red);    box-shadow: 0 0 8px var(--red); }
+    .dot-blue   { background: var(--blue-bright); }
+    .dot-pulse  { animation: pulse 1.8s ease-in-out infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .4; transform: scale(1.4); }
+    }
+
+    .stat-label { color: var(--text-2); }
+    .stat-value { color: var(--text-1); font-weight: 700; }
+
+    /* ── Last run badge ── */
+    .last-run {
+      text-align: center;
+      margin-bottom: 40px;
+      color: var(--text-3);
+      font-size: 0.82rem;
+    }
+
+    .last-run strong { color: var(--text-2); }
+
+    /* ── Grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+      margin-bottom: 80px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      backdrop-filter: blur(12px);
+      transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      border-radius: var(--radius) var(--radius) 0 0;
+      transition: opacity .25s;
+    }
+
+    .card.ok::before   { background: linear-gradient(90deg, transparent, var(--green), transparent); }
+    .card.fail::before { background: linear-gradient(90deg, transparent, var(--red),   transparent); }
+
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: var(--border-hover);
+      box-shadow: 0 20px 48px rgba(0,0,0,0.4);
+    }
+
+    .card.ok:hover   { box-shadow: 0 20px 48px rgba(0,0,0,0.4), 0 0 0 1px var(--green-dim); }
+    .card.fail:hover { box-shadow: 0 20px 48px rgba(0,0,0,0.4), 0 0 0 1px var(--red-dim); }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .project-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-1);
+      word-break: break-all;
+    }
+
+    .project-url {
+      font-size: 0.75rem;
+      color: var(--text-3);
+      margin-top: 4px;
+      word-break: break-all;
+    }
+
+    .status-badge {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 50px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .badge-ok   { background: var(--green-dim); color: var(--green);  border: 1px solid rgba(34,211,165,0.3); }
+    .badge-fail { background: var(--red-dim);   color: var(--red);    border: 1px solid rgba(244,97,122,0.3); }
+
+    .badge-icon { font-size: 0.85rem; }
+
+    /* ── Stats row ── */
+    .stats-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .stat-box {
+      flex: 1;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+
+    .stat-box-label {
+      font-size: 0.7rem;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+
+    .stat-box-value {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-1);
+    }
+
+    .latency-good   { color: var(--green); }
+    .latency-medium { color: var(--amber); }
+    .latency-slow   { color: var(--red);   }
+
+    /* ── Error box ── */
+    .error-box {
+      margin-top: 16px;
+      background: rgba(244,97,122,0.06);
+      border: 1px solid rgba(244,97,122,0.2);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: 0.78rem;
+      color: #fca5a5;
+      font-family: 'Courier New', monospace;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+
+    /* ── Skeleton loader ── */
+    .skeleton-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      animation: shimmer 1.6s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+      0%, 100% { opacity: .5; }
+      50%       { opacity: 1; }
+    }
+
+    .skel-line {
+      background: rgba(255,255,255,0.06);
+      border-radius: 6px;
+      height: 14px;
+      margin-bottom: 12px;
+    }
+
+    .skel-line.short  { width: 45%; }
+    .skel-line.medium { width: 70%; }
+    .skel-line.full   { width: 100%; }
+
+    /* ── Empty / error state ── */
+    .empty-state {
+      text-align: center;
+      padding: 80px 24px;
+      color: var(--text-3);
+    }
+
+    .empty-icon { font-size: 3rem; margin-bottom: 16px; }
+    .empty-title { font-size: 1.2rem; font-weight: 600; color: var(--text-2); margin-bottom: 8px; }
+    .empty-desc  { font-size: 0.9rem; line-height: 1.6; }
+    .empty-desc code {
+      background: rgba(255,255,255,0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      color: var(--blue-bright);
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 32px 0 48px;
+      color: var(--text-3);
+      font-size: 0.82rem;
+      border-top: 1px solid var(--border);
+    }
+
+    footer a { color: var(--blue-bright); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ── Refresh indicator ── */
+    .refresh-ring {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border: 2px solid var(--border);
+      border-top-color: var(--blue-bright);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      vertical-align: middle;
+      margin-left: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      header { padding: 36px 0 0; }
+      h1 { font-size: 1.8rem; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🛡️</div>
+      <span class="logo-text">KeepAlive</span>
+    </div>
+    <h1>Supabase <span>Project Monitor</span></h1>
+    <p class="subtitle">
+      All your free-tier Supabase projects — monitored, pinged, and kept alive automatically.
+    </p>
+  </header>
+
+  <!-- Summary bar -->
+  <div class="summary-bar" id="summary-bar">
+    <div class="stat-chip">
+      <span class="stat-dot dot-blue dot-pulse"></span>
+      <span class="stat-label">Loading…</span>
+    </div>
+  </div>
+
+  <!-- Last run -->
+  <div class="last-run" id="last-run"></div>
+
+  <!-- Cards grid -->
+  <div class="grid" id="grid">
+    <!-- Skeleton placeholders -->
+    <div class="skeleton-card">
+      <div class="skel-line medium"></div>
+      <div class="skel-line short"></div>
+      <div class="skel-line full" style="height:60px;margin-top:20px;border-radius:10px;"></div>
+    </div>
+    <div class="skeleton-card">
+      <div class="skel-line medium"></div>
+      <div class="skel-line short"></div>
+      <div class="skel-line full" style="height:60px;margin-top:20px;border-radius:10px;"></div>
+    </div>
+    <div class="skeleton-card">
+      <div class="skel-line medium"></div>
+      <div class="skel-line short"></div>
+      <div class="skel-line full" style="height:60px;margin-top:20px;border-radius:10px;"></div>
+    </div>
+  </div>
+
+  <footer>
+    Auto-refreshes every 60 seconds &nbsp;·&nbsp;
+    Powered by <a href="https://github.com" target="_blank" rel="noopener">GitHub Actions</a> &nbsp;·&nbsp;
+    Status data from <code id="status-source">status.json</code>
+  </footer>
+</div>
+
+<script>
+  // ─── Config ────────────────────────────────────────────────────────────────
+  // If you host on GitHub Pages, replace this with the raw URL of your status.json:
+  // e.g. "https://raw.githubusercontent.com/YOUR_USER/YOUR_REPO/main/status.json"
+  // For local testing, leave it as "./status.json"
+  const STATUS_URL = "https://raw.githubusercontent.com/praveen0006/supabase-keepalive/main/status.json";
+  const REFRESH_MS = 60_000; // 60 seconds
+
+  // ─── Helpers ───────────────────────────────────────────────────────────────
+  function timeAgo(iso) {
+    if (!iso) return "—";
+    const secs = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (secs < 60)  return `${secs}s ago`;
+    if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+    if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+    return `${Math.floor(secs / 86400)}d ago`;
+  }
+
+  function latencyClass(ms) {
+    if (ms == null) return "";
+    if (ms < 400) return "latency-good";
+    if (ms < 1200) return "latency-medium";
+    return "latency-slow";
+  }
+
+  function latencyLabel(ms) {
+    if (ms == null) return "—";
+    if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
+    return `${ms}ms`;
+  }
+
+  function shortUrl(url) {
+    if (!url) return "";
+    return url.replace("https://", "").replace(/\/$/, "");
+  }
+
+  // ─── Render ────────────────────────────────────────────────────────────────
+  function renderSummary(data) {
+    const total   = data.totalProjects ?? data.results.length;
+    const healthy = data.healthy ?? data.results.filter(r => r.ok).length;
+    const failed  = total - healthy;
+
+    const bar = document.getElementById("summary-bar");
+    bar.innerHTML = `
+      <div class="stat-chip">
+        <span class="stat-dot dot-blue"></span>
+        <span class="stat-label">Total</span>
+        <span class="stat-value">${total}</span>
+      </div>
+      <div class="stat-chip">
+        <span class="stat-dot dot-green"></span>
+        <span class="stat-label">Healthy</span>
+        <span class="stat-value">${healthy}</span>
+      </div>
+      ${failed > 0 ? `
+      <div class="stat-chip">
+        <span class="stat-dot dot-red"></span>
+        <span class="stat-label">Failed</span>
+        <span class="stat-value">${failed}</span>
+      </div>` : ""}
+      <div class="stat-chip">
+        <span class="stat-dot dot-green dot-pulse"></span>
+        <span class="stat-label">Next check in</span>
+        <span class="stat-value" id="countdown">—</span>
+      </div>
+    `;
+  }
+
+  function renderLastRun(data) {
+    const el = document.getElementById("last-run");
+    if (!data.lastRun) { el.textContent = ""; return; }
+    el.innerHTML = `Last automated ping: <strong>${timeAgo(data.lastRun)}</strong> &nbsp;(${new Date(data.lastRun).toLocaleString()})`;
+  }
+
+  function renderCards(results) {
+    const grid = document.getElementById("grid");
+    if (!results || results.length === 0) {
+      grid.innerHTML = `
+        <div class="empty-state" style="grid-column:1/-1">
+          <div class="empty-icon">🌐</div>
+          <div class="empty-title">No projects yet</div>
+          <div class="empty-desc">
+            Add your Supabase projects to <code>projects.json</code> and
+            run <code>node keepalive.mjs</code> to generate <code>status.json</code>.
+          </div>
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = results.map(r => `
+      <div class="card ${r.ok ? "ok" : "fail"}" id="card-${r.name.replace(/\W/g,'_')}">
+        <div class="card-header">
+          <div>
+            <div class="project-name">${escHtml(r.name)}</div>
+            ${r.url ? `<div class="project-url">${escHtml(shortUrl(r.url))}</div>` : ""}
+          </div>
+          <div class="status-badge ${r.ok ? "badge-ok" : "badge-fail"}">
+            <span class="badge-icon">${r.ok ? "✅" : "❌"}</span>
+            ${r.ok ? "Online" : "Failed"}
+          </div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-box-label">Latency</div>
+            <div class="stat-box-value ${latencyClass(r.ms)}">${latencyLabel(r.ms)}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">HTTP</div>
+            <div class="stat-box-value">${r.status ?? "—"}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">Last Ping</div>
+            <div class="stat-box-value" style="font-size:.85rem;font-weight:500;">${timeAgo(r.pingedAt)}</div>
+          </div>
+        </div>
+
+        ${!r.ok && r.error ? `<div class="error-box">⚠️ ${escHtml(r.error)}</div>` : ""}
+      </div>
+    `).join("");
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;");
+  }
+
+  // ─── Fetch & render ────────────────────────────────────────────────────────
+  async function loadStatus() {
+    try {
+      const res = await fetch(`${STATUS_URL}?_=${Date.now()}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      renderSummary(data);
+      renderLastRun(data);
+      renderCards(data.results);
+    } catch (err) {
+      const grid = document.getElementById("grid");
+      grid.innerHTML = `
+        <div class="empty-state" style="grid-column:1/-1">
+          <div class="empty-icon">⚠️</div>
+          <div class="empty-title">Could not load status</div>
+          <div class="empty-desc">
+            Make sure <code>status.json</code> exists (run <code>node keepalive.mjs</code> once).<br/>
+            Error: ${escHtml(err.message)}
+          </div>
+        </div>`;
+      document.getElementById("summary-bar").innerHTML = `
+        <div class="stat-chip">
+          <span class="stat-dot dot-red"></span>
+          <span class="stat-label">status.json not found</span>
+        </div>`;
+    }
+  }
+
+  // ─── Countdown timer ───────────────────────────────────────────────────────
+  let nextRefresh = Date.now() + REFRESH_MS;
+
+  function updateCountdown() {
+    const el = document.getElementById("countdown");
+    if (!el) return;
+    const secs = Math.max(0, Math.round((nextRefresh - Date.now()) / 1000));
+    el.textContent = secs > 0 ? `${secs}s` : "now";
+  }
+
+  setInterval(updateCountdown, 1000);
+
+  // ─── Auto-refresh ──────────────────────────────────────────────────────────
+  async function refresh() {
+    await loadStatus();
+    nextRefresh = Date.now() + REFRESH_MS;
+  }
+
+  setInterval(refresh, REFRESH_MS);
+
+  // ─── Init ──────────────────────────────────────────────────────────────────
+  loadStatus();
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "lastRun": "2026-07-09T08:45:30.704Z",
+  "totalProjects": 3,
+  "healthy": 3,
+  "results": [
+    {
+      "name": "voice-forms",
+      "url": "https://hjzvfqydisepulerkimq.supabase.co",
+      "ok": true,
+      "status": 200,
+      "ms": 1597,
+      "pingedAt": "2026-07-09T08:45:28.755Z"
+    },
+    {
+      "name": "farmy",
+      "url": "https://mjyxtgdwpbtazrajenyc.supabase.co",
+      "ok": true,
+      "status": 200,
+      "ms": 1522,
+      "pingedAt": "2026-07-09T08:45:28.989Z"
+    },
+    {
+      "name": "health-bot",
+      "url": "https://vocdogagyikicffsrkhh.supabase.co",
+      "ok": true,
+      "status": 200,
+      "ms": 1711,
+      "pingedAt": "2026-07-09T08:45:28.992Z"
+    }
+  ]
+}
