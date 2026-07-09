@@ -1,0 +1,14 @@
+[
+  {
+    "name": "my-first-app",
+    "url": "https://abcdefghijkl.supabase.co",
+    "apiKey": "eyJhbGciOiJIUzI1NiIs...",
+    "table": "keepalive"
+  },
+  {
+    "name": "my-second-app",
+    "url": "https://mnopqrstuvwx.supabase.co",
+    "apiKey": "eyJhbGciOiJIUzI1NiIs...",
+    "table": "keepalive"
+  }
+]
