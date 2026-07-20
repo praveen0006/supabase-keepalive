@@ -8,18 +8,25 @@
  *
  * If a project is paused (non-2xx response), the agent will automatically
  * restore it via the Supabase Management API, wait for it to become healthy,
- * then re-ping to confirm. Requires SUPABASE_ACCESS_TOKEN secret.
+ * then re-ping to confirm.
+ *
+ * Supports MULTIPLE Supabase accounts. Each project can carry its own
+ * management token via the optional "mgmtToken" field, falling back to the
+ * global SUPABASE_ACCESS_TOKEN environment variable.
  *
  * Config comes from either:
  *   - the SUPABASE_PROJECTS env var (JSON string), or
  *   - projects.json in this folder (used for local runs)
  *
- * Each project entry needs:
+ * Each project entry:
  *   {
- *     "name": "my-app",              // just a label for logs
+ *     "name": "my-app",              // label for logs
  *     "url": "https://xxxx.supabase.co",
  *     "apiKey": "eyJ...",            // anon or service_role key
- *     "table": "keepalive"           // any real table PostgREST can read
+ *     "table": "keepalive",          // any selectable table
+ *     "mgmtToken": "sbp_..."         // OPTIONAL — Supabase personal access
+ *                                    // token for THIS project's account.
+ *                                    // Falls back to SUPABASE_ACCESS_TOKEN.
  *   }
  *
  * The "table" just needs to exist and be selectable by the key you use.
@@ -104,8 +111,10 @@ async function waitForHealthy(ref, token, name) {
 
 // ─── Ping logic ────────────────────────────────────────────────────────────────
 
-async function pingProject(project, token) {
+async function pingProject(project, globalToken) {
   const { name, url, apiKey, table } = project;
+  // Per-project token takes priority over the global env var token
+  const token = project.mgmtToken || globalToken;
   const cleanUrl = url.replace(/\/+$/, "");
   const endpoint = `${cleanUrl}/rest/v1/${table}?select=*&limit=1`;
   const pingedAt = new Date().toISOString();
@@ -206,12 +215,19 @@ function writeStatus(results) {
 
 async function main() {
   const projects = loadProjects();
-  const token = process.env.SUPABASE_ACCESS_TOKEN || null;
+  const globalToken = process.env.SUPABASE_ACCESS_TOKEN || null;
 
-  if (!token) {
-    console.warn("⚠  SUPABASE_ACCESS_TOKEN not set — auto-resume is disabled.\n");
+  // Count how many projects have a token (per-project or global)
+  const withToken = projects.filter((p) => p.mgmtToken || globalToken).length;
+  const withPerProject = projects.filter((p) => p.mgmtToken).length;
+
+  if (!globalToken && withPerProject === 0) {
+    console.warn("⚠  No management tokens found — auto-resume is disabled.\n");
   } else {
-    console.log("🔑 Management API token loaded — auto-resume enabled.\n");
+    const lines = [];
+    if (globalToken) lines.push("global SUPABASE_ACCESS_TOKEN");
+    if (withPerProject > 0) lines.push(`${withPerProject} project-level mgmtToken(s)`);
+    console.log(`🔑 Management tokens: ${lines.join(" + ")} — auto-resume enabled for ${withToken}/${projects.length} project(s).\n`);
   }
 
   if (!Array.isArray(projects) || projects.length === 0) {
@@ -226,7 +242,7 @@ async function main() {
   const results = [];
   for (const project of projects) {
     console.log(`→ ${project.name}`);
-    const r = await pingProject(project, token);
+    const r = await pingProject(project, globalToken);
     results.push(r);
     console.log("");
   }
