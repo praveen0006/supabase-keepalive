@@ -116,17 +116,23 @@ async function pingProject(project, globalToken) {
   // Per-project token takes priority over the global env var token
   const token = project.mgmtToken || globalToken;
   const cleanUrl = url.replace(/\/+$/, "");
-  const endpoint = `${cleanUrl}/rest/v1/${table}?select=*&limit=1`;
   const pingedAt = new Date().toISOString();
   const started = Date.now();
 
+  // Use UPSERT (INSERT + ON CONFLICT UPDATE) so Supabase registers a real
+  // database WRITE — SELECT-only queries may not count as "sufficient activity"
+  // for Supabase's inactivity detection, but writes always do.
+  const upsertEndpoint = `${cleanUrl}/rest/v1/${table}`;
   const doFetch = () =>
-    fetch(endpoint, {
-      method: "GET",
+    fetch(upsertEndpoint, {
+      method: "POST",
       headers: {
         apikey: apiKey,
         Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=minimal",
       },
+      body: JSON.stringify({ id: 1, pinged_at: pingedAt }),
     });
 
   // ── First attempt ────────────────────────────────────────────────────────────
@@ -140,6 +146,7 @@ async function pingProject(project, globalToken) {
     };
   }
 
+  // 200 or 204 = success for upsert
   if (res.ok) {
     return { name, url: cleanUrl, ok: true, status: res.status, ms: Date.now() - started, pingedAt, resumed: false };
   }
