@@ -1,33 +1,35 @@
 {
-  "lastRun": "2026-11-22T16:47:07.820Z",
+  "lastRun": "2026-11-23T20:43:09.535Z",
   "totalProjects": 3,
-  "healthy": 3,
+  "healthy": 1,
   "results": [
     {
       "name": "voice-forms",
       "url": "https://hjzvfqydisepulerkimq.supabase.co",
       "ok": true,
       "status": 200,
-      "ms": 1277,
-      "pingedAt": "2026-11-22T16:47:03.902Z",
+      "ms": 1343,
+      "pingedAt": "2026-11-23T20:43:08.131Z",
       "resumed": false
     },
     {
       "name": "farmy",
       "url": "https://mjyxtgdwpbtazrajenyc.supabase.co",
-      "ok": true,
-      "status": 200,
-      "ms": 1295,
-      "pingedAt": "2026-11-22T16:47:05.180Z",
+      "ok": false,
+      "status": null,
+      "ms": 34,
+      "error": "fetch failed",
+      "pingedAt": "2026-11-23T20:43:09.474Z",
       "resumed": false
     },
     {
       "name": "health-bot",
       "url": "https://vocdogagyikicffsrkhh.supabase.co",
-      "ok": true,
-      "status": 200,
-      "ms": 1343,
-      "pingedAt": "2026-11-22T16:47:06.476Z",
+      "ok": false,
+      "status": null,
+      "ms": 25,
+      "error": "fetch failed",
+      "pingedAt": "2026-11-23T20:43:09.509Z",
       "resumed": false
     }
   ]
