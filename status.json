@@ -1,5 +1,5 @@
 {
-  "lastRun": "2026-11-24T19:47:59.643Z",
+  "lastRun": "2026-11-25T18:54:10.740Z",
   "totalProjects": 3,
   "healthy": 1,
   "results": [
@@ -8,8 +8,8 @@
       "url": "https://hjzvfqydisepulerkimq.supabase.co",
       "ok": true,
       "status": 200,
-      "ms": 1217,
-      "pingedAt": "2026-11-24T19:47:58.396Z",
+      "ms": 1181,
+      "pingedAt": "2026-11-25T18:54:09.524Z",
       "resumed": false
     },
     {
@@ -17,9 +17,9 @@
       "url": "https://mjyxtgdwpbtazrajenyc.supabase.co",
       "ok": false,
       "status": null,
-      "ms": 16,
+      "ms": 17,
       "error": "fetch failed",
-      "pingedAt": "2026-11-24T19:47:59.613Z",
+      "pingedAt": "2026-11-25T18:54:10.706Z",
       "resumed": false
     },
     {
@@ -27,9 +27,9 @@
       "url": "https://vocdogagyikicffsrkhh.supabase.co",
       "ok": false,
       "status": null,
-      "ms": 13,
+      "ms": 16,
       "error": "fetch failed",
-      "pingedAt": "2026-11-24T19:47:59.629Z",
+      "pingedAt": "2026-11-25T18:54:10.724Z",
       "resumed": false
     }
   ]
